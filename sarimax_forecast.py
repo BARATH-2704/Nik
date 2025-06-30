@@ -8,25 +8,19 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# Step 1: Load dataset
 df = pd.read_csv('data/preprocessed_walmart_dataset.csv')
 df['Date'] = pd.to_datetime(df['Date'])
-
-# Step 2: Filter for Store 1, Dept 1
 df = df[(df['Store'] == 1) & (df['Dept'] == 1)].sort_values('Date')
 df.set_index('Date', inplace=True)
 df.index = pd.DatetimeIndex(df.index).to_period('W').to_timestamp()
 
-# Step 3: Target and Exogenous Variables
 y = df['Weekly_Sales']
 X = df[['Temperature', 'Fuel_Price', 'CPI', 'Unemployment', 'IsHoliday']]
 
-# Step 4: Train-Test Split (80-20)
 split_index = int(len(y) * 0.8)
 y_train, y_test = y.iloc[:split_index], y.iloc[split_index:]
 X_train, X_test = X.iloc[:split_index], X.iloc[split_index:]
 
-# Step 5: Build SARIMAX Model
 model = SARIMAX(y_train,
                 exog=X_train,
                 order=(1, 1, 1),
@@ -35,14 +29,11 @@ model = SARIMAX(y_train,
                 enforce_invertibility=False)
 results = model.fit(disp=False)
 
-# Step 6: Forecast
 pred = results.get_prediction(start=len(y_train), end=len(y_train) + len(y_test) - 1, exog=X_test)
 forecast = pred.predicted_mean
-forecast.index = y_test.index  # realign index for plotting
-forecast = pred.predicted_mean
+forecast.index = y_test.index
 conf_int = pred.conf_int()
 
-# Step 7: Evaluation
 mae = mean_absolute_error(y_test, forecast)
 rmse = np.sqrt(mean_squared_error(y_test, forecast))
 
@@ -50,7 +41,6 @@ print("\n✅ SARIMAX Forecast Complete")
 print(f"MAE:  {mae:.2f}")
 print(f"RMSE: {rmse:.2f}\n")
 
-# Step 8: Save Results
 os.makedirs("output", exist_ok=True)
 pd.DataFrame({
     'Date': y_test.index,
@@ -58,7 +48,6 @@ pd.DataFrame({
     'Predicted_Sales': forecast.values
 }).to_csv('output/sarimax_forecast_output.csv', index=False)
 
-# Step 9: Plot
 plt.figure(figsize=(12, 6))
 plt.plot(y_train.index, y_train, label='Train')
 plt.plot(y_test.index, y_test, label='Actual', color='blue')
